@@ -1,0 +1,6 @@
+defaultProject: books-ml
+defaultDataset: dataform
+defaultAssertionDataset: dataform_assertions
+dataformCoreVersion: 3.0.37
+vars:
+    executionSetting: development

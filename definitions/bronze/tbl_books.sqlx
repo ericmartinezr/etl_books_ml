@@ -1,0 +1,11 @@
+config {
+    type: "operations",
+    hasOutput: true,
+    schema: "ds_books_bronze",
+    name: "tbl_books"
+}
+
+LOAD DATA OVERWRITE
+  ${self()}
+FROM FILES ( format = 'AVRO',
+    uris = ['gs://books-ml-input/libros.avro'] );

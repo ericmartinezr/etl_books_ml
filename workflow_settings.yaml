@@ -1,5 +1,5 @@
 defaultProject: books-ml
-defaultDataset: dataform
+defaultDataset: ds_books_bronze
 defaultAssertionDataset: dataform_assertions
 dataformCoreVersion: 3.0.37
 vars:

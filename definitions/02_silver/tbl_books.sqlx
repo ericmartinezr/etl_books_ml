@@ -1,7 +1,35 @@
 config {
-    type: "table",
+    type: "table", 
     bigquery: {
-        clusterBy: ["nombre", "precio", "ficha.anio", "ficha.isbn13", "ficha.autor"]
+        clusterBy: ["nombre",  "precio",  "ficha.anio",  "ficha.isbn13",  "ficha.autor"]
     }
 }
 
+js {
+
+}
+
+SELECT 
+    nombre,
+    precio.origen AS origen,
+    precio.estado AS estado,
+    precio.original AS precio_original,
+    IFNULL(precio.oferta, 0) AS precio_oferta,
+    precio.stock AS stock,
+    ficha.formato AS ficha_formato, 
+    ficha.autor AS autor,
+    ficha.editorial AS editorial, 
+    CAST(ficha.anio AS INT) AS fecha_publicacion, 
+    ficha.idioma AS idioma,
+    resena,
+    autor.nombre AS autor_nombre,
+    autor.bio AS autor_biografia,
+    opiniones.nombre_usuario AS  opinion_usuario, 
+    opiniones.valoracion AS  opinion_valoracion, 
+    ${utils.convertDate("opiniones.fecha")} AS  opinion_fecha, 
+    opiniones.opinion AS  opinion_opinion, 
+    CAST(valoraciones.estrellas AS INT) AS  valoracion_estrella, 
+    valoraciones.descripcion AS  valoracion_descripcion
+FROM ${
+    ref("tbl_books_raw")
+}

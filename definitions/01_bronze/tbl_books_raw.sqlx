@@ -2,7 +2,7 @@ config {
     type: "operations",
     hasOutput: true,
     schema: "ds_books_bronze",
-    name: "tbl_books"
+    name: "tbl_books_raw"
 }
 
 LOAD DATA OVERWRITE

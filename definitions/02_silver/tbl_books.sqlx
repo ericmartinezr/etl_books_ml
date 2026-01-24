@@ -1,0 +1,7 @@
+config {
+    type: "table",
+    bigquery: {
+        clusterBy: ["nombre", "precio", "ficha.anio", "ficha.isbn13", "ficha.autor"]
+    }
+}
+

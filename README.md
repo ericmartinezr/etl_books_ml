@@ -265,6 +265,10 @@ FROM
 ORDER BY similarity_score DESC
 ```
 
+## Diagrama
+
+![Diagrama](images/diagrama.png)
+
 ## Referencia
 
 - https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-generate-embedding

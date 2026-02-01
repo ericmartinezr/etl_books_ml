@@ -20,6 +20,28 @@ BQ_DATASET_SLV="ds_books_silver"
 BQ_DATASET_GLD="ds_books_gold"
 ```
 
+## Habilitar APIs necesarias
+
+```sh
+gcloud services enable \
+    cloudbuild.googleapis.com \
+    compute.googleapis.com \
+    storage.googleapis.com \
+    secretmanager.googleapis.com \
+    dataform.googleapis.com \
+    aiplatform.googleapis.com
+```
+
+## Crear bucket
+
+```sh
+BUCKET_NAME="books-ml-input"
+
+gcloud storage buckets create gs://${BUCKET_NAME} \
+    --location=$REGION \
+ --uniform-bucket-level-access
+```
+
 ## Crear una cuenta de servicio para Dataform
 
 ```sh
@@ -197,28 +219,6 @@ CONN_SA=$(bq show --connection --format=json \
   | jq -r '.cloudResource.serviceAccountId')
 
 gcloud projects add-iam-policy-binding ${PROJECT_ID} --member="serviceAccount:${CONN_SA}" --role="roles/aiplatform.user"
-```
-
-## Habilitar APIs necesarias
-
-```sh
-gcloud services enable \
-    cloudbuild.googleapis.com \
-    compute.googleapis.com \
-    storage.googleapis.com \
-    secretmanager.googleapis.com \
-    dataform.googleapis.com \
-    aiplatform.googleapis.com
-```
-
-## Crear bucket
-
-```sh
-BUCKET_NAME="books-ml-input"
-
-gcloud storage buckets create gs://${BUCKET_NAME} \
-    --location=$REGION \
- --uniform-bucket-level-access
 ```
 
 ## Consulta para revisar la creación de los índices

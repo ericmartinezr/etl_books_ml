@@ -37,7 +37,7 @@ FROM ${
     ref({
         "schema": utils.schema("silver"), 
         "name": "tbl_books", 
-        "database": "books-ml"
+        "database": dataform.projectConfig.defaultDatabase
     })} AS tb
 LEFT JOIN
     (
@@ -52,7 +52,7 @@ LEFT JOIN
             ${ref({
                 "schema": utils.schema("silver"), 
                 "name": "tbl_books", 
-                "database": "books-ml"
+                "database": dataform.projectConfig.defaultDatabase
             })},
         UNNEST(valoraciones)
         GROUP BY isbn13

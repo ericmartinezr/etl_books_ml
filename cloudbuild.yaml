@@ -15,7 +15,7 @@ steps:
       - '-c'
       - |
         npm install -g @dataform/cli@3.0.37
-        dataform compile
+        dataform compile --vars=env=${_ENV}
 
   # https://docs.cloud.google.com/dataform/docs/schedule-runs#create-build-config
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'

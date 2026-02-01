@@ -2,7 +2,7 @@ WITH user_input AS (
   SELECT embedding
   FROM AI.GENERATE_EMBEDDING(
     -- Quitar "_dev" si se ejecuta con data productiva
-    MODEL `books-ml.ds_books_gold_dev.dev_vertex_ai_books_endpoint`,
+    MODEL `books-ml.ds_books_gold_dev.vertex_ai_books_endpoint`,
     (SELECT CAST(@search_query AS STRING) AS content),
     STRUCT('RETRIEVAL_QUERY' AS task_type, 1024 AS output_dimensionality)
   )
@@ -15,7 +15,7 @@ SELECT
 FROM
   VECTOR_SEARCH(
     -- Quitar "_dev" si se ejecuta con data productiva
-    TABLE `books-ml.ds_books_gold_dev.dev_ml_books_model`,
+    TABLE `books-ml.ds_books_gold_dev.ml_books_model`,
     'embedding',
     TABLE user_input,
     top_k => 10,

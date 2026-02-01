@@ -10,9 +10,9 @@ export REGION="us-central1"
 export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
 
 # Datasets "development" (opcional, se crean con Dataform)
-BQ_DATASET_BRZ_DEV="dev_ds_books_bronze"
-BQ_DATASET_SLV_DEV="dev_ds_books_silver"
-BQ_DATASET_GLD_DEV="dev_ds_books_gold"
+BQ_DATASET_BRZ_DEV="ds_books_bronze_dev"
+BQ_DATASET_SLV_DEV="ds_books_silver_dev"
+BQ_DATASET_GLD_DEV="ds_books_gold_dev"
 
 # Datasets "production" (opcional, se crean con Dataform)
 BQ_DATASET_BRZ="ds_books_bronze"
@@ -100,7 +100,9 @@ Como referencia los nombres de las configuraciones deben coincidir con las varia
 
 - Release ID: `dev`
 - Schedule frequency: `On-demand`
-- Table prefix: `dev`
+- Compilation variables: 
+  - Key: `env`
+  - Value: `dev`
 
 Todo lo demás por defecto
 
@@ -108,7 +110,9 @@ Todo lo demás por defecto
 
 - Release ID: `prod`
 - Schedule frequency: `On-demand`
-- Table prefix: `prd`
+- Compilation variables: 
+  - Key: `env`
+  - Value: `prod`
 
 ### Workflow configurations
 
@@ -244,7 +248,8 @@ _Nota: Esta query también se encuentra en [looker_studio_custom_query.sql](look
 WITH user_input AS (
   SELECT embedding
   FROM AI.GENERATE_EMBEDDING(
-    MODEL `books-ml.ds_books_gold.vertex_ai_books_endpoint`,
+    -- Quitar "_dev" si se ejecuta con data productiva
+    MODEL `books-ml.ds_books_gold_dev.vertex_ai_books_endpoint`,
     (SELECT CAST(@search_query AS STRING) AS content),
     STRUCT('RETRIEVAL_QUERY' AS task_type, 1024 AS output_dimensionality)
   )
@@ -256,7 +261,8 @@ SELECT
   (1 - distance) * 100 AS similarity_score
 FROM
   VECTOR_SEARCH(
-    TABLE `books-ml.ds_books_gold.ml_books_model`,
+    -- Quitar "_dev" si se ejecuta con data productiva
+    TABLE `books-ml.ds_books_gold_dev.ml_books_model`,
     'embedding',
     TABLE user_input,
     top_k => 10,

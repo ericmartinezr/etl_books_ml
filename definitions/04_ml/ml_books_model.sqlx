@@ -26,7 +26,7 @@ FROM
                     ${ref({
                         "schema": utils.schema("gold"), 
                         "name": "tbl_books", 
-                        "database": "books-ml"
+                        "database": dataform.projectConfig.defaultDatabase
                     })}
             ),
             STRUCT(

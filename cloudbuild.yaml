@@ -1,0 +1,124 @@
+steps:
+  # !! El archivo es muy grande para subirlo a Github, asi que dejo esta seccion comentada
+  #
+  # Copia archivo de entrada a Cloud Storage
+  #- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  #  id: 'copy-books'
+  #  entrypoint: 'gsutil'
+  #  args: ['cp', 'libros.avro', '${_INPUT_LOCATION}/libros.avro']
+
+  # Instala dependencias y valida la sintaxis y la logica JS
+  - name: 'node:20'
+    id: 'compile'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        npm install -g @dataform/cli@3.0.37
+        dataform compile
+
+  # https://docs.cloud.google.com/dataform/docs/schedule-runs#create-build-config
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
+    id: 'compilation-response'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Sale en cualquier error
+        set -e -o pipefail
+
+        # Obtiene el token de acceso
+        TOKEN=$(gcloud auth print-access-token)
+
+        # Endpoints
+        RELEASE_CONFIG_RESOURCE="projects/${_PROJECT_ID}/locations/${_DATAFORM_LOCATION}/repositories/${_DATAFORM_REPO_ID}/releaseConfigs/${_RELEASE_CONFIG_ID}"
+        COMPILATION_RESULTS_API="https://dataform.googleapis.com/v1/projects/${_PROJECT_ID}/locations/${_DATAFORM_LOCATION}/repositories/${_DATAFORM_REPO_ID}/compilationResults"
+
+        # Crea el resultado de la compilacion
+        echo "Creando nuevo resultado de compilacion de $$RELEASE_CONFIG_RESOURCE..."
+        CREATE_PAYLOAD="{\"releaseConfig\": \"$$RELEASE_CONFIG_RESOURCE\"}"
+        curl --fail-with-body -X POST \
+          -H "Authorization: Bearer $$TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "$$CREATE_PAYLOAD" \
+          "$$COMPILATION_RESULTS_API" | tee /workspace/compilation_response.json
+    waitFor: ['compile']
+
+  - name: 'alpine'
+    id: 'compilation-name'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        # Sale en cualquier error
+        set -e
+
+        # Obtiene el nombre del resultado de la compilacion
+        apk add --no-cache jq
+        COMPILATION_NAME=$(jq -r '.name' < /workspace/compilation_response.json)
+
+        echo "Compilado exitoso: $$COMPILATION_NAME"
+        echo $$COMPILATION_NAME > /workspace/compilation_result_name.txt
+    waitFor: ['compilation-response']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
+    id: 'release-config-update'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Sale en caso de cualquier error
+        set -e
+
+        # Actualiza la configuracion del release para marcar la nueva compilacion como "live"
+        COMPILATION_NAME=$(cat /workspace/compilation_result_name.txt)
+        echo "Actualizando la configuracion para marcar $$COMPILATION_NAME como 'live'..."
+        PATCH_PAYLOAD="{\"releaseCompilationResult\": \"$$COMPILATION_NAME\", \"gitCommitish\": \"$BRANCH_NAME\"}"
+
+        RELEASE_CONFIG_RESOURCE="projects/${_PROJECT_ID}/locations/${_DATAFORM_LOCATION}/repositories/${_DATAFORM_REPO_ID}/releaseConfigs/${_RELEASE_CONFIG_ID}"
+        RELEASE_CONFIG_PATCH_API="https://dataform.googleapis.com/v1/$${RELEASE_CONFIG_RESOURCE}"
+        curl --fail-with-body -X PATCH \
+          -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+          -H "Content-Type: application/json" \
+          -d "$$PATCH_PAYLOAD" \
+          "$$RELEASE_CONFIG_PATCH_API?updateMask=releaseCompilationResult"
+
+        echo "Configuracion de release actualizada correctamente"
+    waitFor: ['compilation-name']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
+    id: 'workflow-invocation'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Sale en caso de cualquier error
+        set -e
+
+        # Genera la configuracion despues de recompilar la configuracion del release
+        WORKFLOW_CONFIG_RESOURCE="projects/${_PROJECT_ID}/locations/${_DATAFORM_LOCATION}/repositories/${_DATAFORM_REPO_ID}/workflowConfigs/${_WORKFLOW_CONFIG_ID}"
+        CREATE_WORKFLOW_PAYLOAD="{\"workflowConfig\": \"$$WORKFLOW_CONFIG_RESOURCE\"}"
+
+        WORKFLOW_INVOCATIONS_API="https://dataform.googleapis.com/v1/projects/${_PROJECT_ID}/locations/${_DATAFORM_LOCATION}/repositories/${_DATAFORM_REPO_ID}/workflowInvocations"
+        curl --fail-with-body -X POST \
+          -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+          -H "Content-Type: application/json" \
+          -d "$$CREATE_WORKFLOW_PAYLOAD" \
+          "$$WORKFLOW_INVOCATIONS_API"
+
+        echo "Invocacion de workflow creada correctamente"
+    waitFor: ['release-config-update']
+
+substitutions:
+  # Valor por defecto
+  # Lo sobreescribe la configuracion del trigger
+  _ENV: 'dev' # Requerido: Configurado en el trigger
+  _DATAFORM_LOCATION: 'us-central1'
+  _INPUT_LOCATION: 'gs://books-ml-input'
+  _DATAFORM_REPO_ID: '' # Requerido: Configurado en el trigger
+  _RELEASE_CONFIG_ID: '' # Requerido: Configurado en el trigger
+  _WORKFLOW_CONFIG_ID: '' # Requerido: Configurado en el trigger
+  _PROJECT_ID: ${PROJECT_ID}
+
+options:
+  logging: CLOUD_LOGGING_ONLY

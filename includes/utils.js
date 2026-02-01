@@ -1,29 +1,6 @@
-/*function convertDate(column) {
-  const months = {
-    Enero: '01',
-    Febrero: '02',
-    Marzo: '03',
-    Abril: '04',
-    Mayo: '05',
-    Junio: '06',
-    Julio: '07',
-    Agosto: '08',
-    Septiembre: '09',
-    Octubre: '10',
-    Noviembre: '11',
-    Diciembre: '12',
-  };
-
-  let formattedCol = column;
-  for (const [spanish, num] of Object.entries(months)) {
-    formattedCol = `REPLACE(${formattedCol}, '${spanish}', '${num}')`;
-  }
-
-  return `PARSE_DATE('%u %d de %m, %Y', ${formattedCol})`;
-}
-module.exports = { convertDate };
-*/
-
+// Funcion para convertir las fechas de las opiniones de los usuarios
+// Actualmente están escritas como "Martes 30 de Abril, 2025"
+// Las convierte a 2025-04-30
 function convertDate(column) {
   return `
     PARSE_DATE('%d-%m-%Y', 
@@ -51,4 +28,12 @@ function convertDate(column) {
   `;
 }
 
-module.exports = { convertDate };
+// Funcion para convertir el esquema segun el ambiente (dev o prod)
+function schema(name) {
+  const env = dataform.projectConfig.vars.env;
+  // Si es "dev" le agrega el sufijo "_dev"
+  // Si es "prod" queda sin sufijo
+  return env === 'prod' ? `ds_books_${name}` : `ds_books_${name}_dev`;
+}
+
+module.exports = { convertDate, schema };

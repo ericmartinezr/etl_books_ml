@@ -1,6 +1,7 @@
 defaultProject: books-ml
+defaultLocation: us-central1
 defaultDataset: ds_books_bronze
-defaultAssertionDataset: dataform_assertions
+defaultAssertionDataset: ds_books_assertions
 dataformCoreVersion: 3.0.37
 vars:
-    executionSetting: development
+  env: 'dev'

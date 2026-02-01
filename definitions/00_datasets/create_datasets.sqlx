@@ -1,0 +1,19 @@
+config {
+    type: "operations",
+    tags: ["create-datasets"]
+}
+
+CREATE SCHEMA IF NOT EXISTS ${utils.schema("bronze")}
+OPTIONS (
+    description = "Dataset para datos crudos"
+);
+
+CREATE SCHEMA IF NOT EXISTS ${utils.schema("silver")}
+OPTIONS (
+    description = "Dataset para datos limpios"
+);
+
+CREATE SCHEMA IF NOT EXISTS ${utils.schema("gold")}
+OPTIONS (
+    description = "Dataset para datos listos para consumir"
+);

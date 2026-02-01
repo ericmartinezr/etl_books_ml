@@ -1,48 +1,114 @@
 config {
     type: "table",
     name: "tbl_books",
+    schema: utils.schema("silver"),
     bigquery: {
-        clusterBy: ["nombre",  "precio_original", "anio_publicacion", "isbn13"]
-    }
+        clusterBy: ["nombre",  "estado", "precio_original", "anio_publicacion"]
+    },
+    assertions: {
+        nonNull: ["nombre", "isbn13"],
+        uniqueKey: ["isbn13"],
+        rowConditions: ["NOT (stock = 'Sí' AND precio_original <= 0)"]
+    },
+    tags: ["silver", "table-clean"]
 }
 
--- TODO: Ver como usar campos nested en clusterBy
 SELECT 
     nombre,
-    precio.origen AS precio_origen,
+    precio.origen AS origen,
     precio.estado AS estado,
     precio.original AS precio_original,
     IFNULL(precio.oferta, 0) AS precio_oferta,
     precio.stock AS stock,
+    productor,
+    peso,
+    coordinacion_editori AS coordinacion_editorial,
+    narrador,
+    coordinacion_general_de AS coordinacion_general,
+    -- Transforma algunos patrones "validos" del año y extrae solo esa parte
+    EXTRACT(
+        YEAR FROM COALESCE(
+            SAFE.PARSE_DATE("%d/%m/%Y", ano),
+            SAFE.PARSE_DATE("%m / %Y", ano),
+            CASE 
+            WHEN REGEXP_CONTAINS(TRIM(ano), r'^\d{4}$') 
+            THEN SAFE.PARSE_DATE("%Y", TRIM(ano)) 
+            ELSE NULL 
+            END,
+            DATE("1900-01-01")
+        )
+    ) AS anio_publicacion, 
+    asistido_por,
+    por_artista,
+    prologo_de,
+    guion_de,
+    introduccion_de,
+    ilustrado_por,
+    dibujos_de,
+    interpretado_por,
+    comentarios_de,
+    epilogo_de,
+    leido_por,
+    adaptado_por,
+    disenado_por,
+    de_fotografo,
+    compilado_por,
+    seleccionado_por,
+    editado_por,
+    traducido_por,
+    prefacio_de,
+    creado_por,
+    contribuciones_de,
+    posfacio_de,
+    fotografias_de,
+    dimensiones,
+    categorias,
+    tema,
+    encuadernacion,
+    con,
+    coleccion,
+    numero_paginas,
+    otro,
+    numero_edicion,
     formato, 
     autor,
-    editorial, 
-    CAST(ano AS INT) AS anio_publicacion, 
+    editorial,
     idioma,
     resena,
+    isbn,
     isbn13,
-    ---- Opiniones
-    --(
-    --    SELECT AS STRUCT
-    --        nombre_usuario,
-    --        valoracion, 
-    --        ${utils.convertDate("fecha")} AS fecha, 
-    --        opinion
-    --    FROM 
-    --        UNNEST(opiniones)
-    --) 
-    --AS opiniones,
-
+    -- Opiniones
+    ARRAY(
+        SELECT AS STRUCT
+            nombre_usuario,
+            valoracion, 
+            ${utils.convertDate("fecha")} AS fecha, 
+            opinion
+        FROM 
+            UNNEST(opiniones)
+    ) 
+    AS opiniones,
     -- Valoraciones
-    --(
-    --    SELECT AS STRUCT
-    --        CAST(estrellas AS INT) AS  valoracion_estrella, 
-    --        descripcion
-    --    FROM
-    --        UNNEST(valoraciones)
-    --) 
-    --AS valoraciones
+    ARRAY(
+        SELECT AS STRUCT
+            CAST(estrellas AS INT) AS  valoracion_estrella,
+            CAST(REGEXP_EXTRACT(TRIM(descripcion), r'^\d{1,3}%\s+\((\d+)\)$') AS INT) AS total_valoracion,
+            descripcion
+        FROM
+            UNNEST(valoraciones)
+    ) 
+    AS valoraciones
 
 FROM ${
     ref("tbl_books_raw")
 }
+
+-- Los embeddings dependen de la reseña, por ende no puede estar en blanco
+WHERE
+    TRIM(resena) != ""
+    -- Si estoy en development retorno un porcentaje del dataset 
+    -- Debe ser superior a 5000 registros por restriccion de VECTOR INDEX con IVF.
+    ${when(dataform.projectConfig.vars.env == "dev", "AND rand() < 0.1", "")}
+
+-- Elimina los duplicados generados por el scrapping
+QUALIFY ROW_NUMBER() OVER(PARTITION BY isbn13 ORDER BY anio_publicacion DESC) = 1

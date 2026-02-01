@@ -1,0 +1,60 @@
+config {
+    type: "table",
+    name: "tbl_books",
+    schema: utils.schema("gold"),
+    bigquery: {
+        clusterBy: ["nombre",  "estado", "precio_original", "anio_publicacion"]
+    },
+    tags: ["gold", "table-final"]
+}
+
+SELECT 
+    nombre,
+    origen,
+    estado,
+    precio_original,
+    precio_oferta,
+    stock,
+    productor,
+    peso,
+    anio_publicacion, 
+    categorias,
+    tema,
+    encuadernacion,
+    numero_paginas,
+    formato, 
+    autor,
+    editorial,
+    idioma,
+    resena,
+    tb.isbn13,
+    IFNULL(val.valoracion_1, 0) AS valoracion_1,
+    IFNULL(val.valoracion_2, 0) AS valoracion_2,
+    IFNULL(val.valoracion_3, 0) AS valoracion_3,
+    IFNULL(val.valoracion_4, 0) AS valoracion_4,
+    IFNULL(val.valoracion_5, 0) AS valoracion_5
+FROM ${
+    ref({
+        "schema": utils.schema("silver"), 
+        "name": "tbl_books", 
+        "database": "books-ml"
+    })} AS tb
+LEFT JOIN
+    (
+        SELECT 
+            isbn13,
+            MAX(IF(valoracion_estrella = 1, total_valoracion, NULL)) AS valoracion_1,
+            MAX(IF(valoracion_estrella = 2, total_valoracion, NULL)) AS valoracion_2,
+            MAX(IF(valoracion_estrella = 3, total_valoracion, NULL)) AS valoracion_3,
+            MAX(IF(valoracion_estrella = 4, total_valoracion, NULL)) AS valoracion_4,
+            MAX(IF(valoracion_estrella = 5, total_valoracion, NULL)) AS valoracion_5
+        FROM 
+            ${ref({
+                "schema": utils.schema("silver"), 
+                "name": "tbl_books", 
+                "database": "books-ml"
+            })},
+        UNNEST(valoraciones)
+        GROUP BY isbn13
+        
+    ) AS val ON tb.isbn13 = val.isbn13

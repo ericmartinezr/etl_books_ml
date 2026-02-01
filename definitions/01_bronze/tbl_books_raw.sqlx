@@ -1,8 +1,10 @@
 config {
     type: "operations",
     hasOutput: true,
-    schema: "ds_books_bronze",
-    name: "tbl_books_raw"
+    name: "tbl_books_raw",
+    schema: utils.schema("bronze"),
+    dependencies: ["create_datasets"],
+    tags: ["bronze", "table-raw"]
 }
 
 LOAD DATA OVERWRITE

@@ -1,0 +1,14 @@
+config {
+    type: "operations",
+    schema: utils.schema("gold"),
+    dependencies: ["ml_books_model"],
+    tags: ["ml", "embedding-index"]
+}
+
+-- Crea indices para acelerar la busqueda
+CREATE OR REPLACE VECTOR INDEX book_index
+ON ${ref("ml_books_model")}(embedding)
+OPTIONS(
+  distance_type = 'COSINE',
+  index_type = 'IVF'
+);

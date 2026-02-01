@@ -1,0 +1,11 @@
+config {
+    type: "operations",
+    hasOutput: true,
+    schema: utils.schema("gold"),
+    name: "vertex_ai_books_endpoint",
+    tags: ["ml", "vertex-endpoint"]
+}
+
+CREATE OR REPLACE MODEL ${self()}
+REMOTE WITH CONNECTION `projects/${dataform.projectConfig.defaultDatabase}/locations/${dataform.projectConfig.defaultLocation}/connections/vertex-ai-conn`
+OPTIONS (ENDPOINT = 'gemini-embedding-001')

@@ -1,0 +1,40 @@
+config {
+    type: "table",
+    name: "ml_books_model",
+    schema: utils.schema("gold"),
+    description: "Genera los vectores para los libros",
+    tags: ["ml", "embedding"]
+}
+
+SELECT
+    *
+FROM
+    AI.GENERATE_EMBEDDING(
+        MODEL ${ref("vertex_ai_books_endpoint")},
+            (
+                SELECT
+                    nombre as title,
+                    resena,
+                    isbn13,
+                    -- Concatena campos para darle contexto al modelo
+                    CONCAT(
+                        "Categoria del libro: ", 
+                        categorias, 
+                        ". Descripcion del libro: ", 
+                        resena) AS content
+                FROM
+                    ${ref({
+                        "schema": utils.schema("gold"), 
+                        "name": "tbl_books", 
+                        "database": "books-ml"
+                    })}
+            ),
+            STRUCT(
+                'RETRIEVAL_DOCUMENT' as task_type,
+                -- gemini-embedding-001 soporta hasta 3072 dimensiones, pero es mucho y muy lento en el despliegue
+                -- asi que lo dejare en 1024
+                1024 AS output_dimensionality
+            )
+    )
+WHERE
+    status = ''
